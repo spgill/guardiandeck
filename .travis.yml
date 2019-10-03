@@ -28,4 +28,8 @@ jobs:
               - ./travis/build-win.sh
 
         - stage: Deploy
+          os: linux
+          dist: xenial
+          language: shell
+          script:
               - ./travis/complete.sh
