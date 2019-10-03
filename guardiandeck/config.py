@@ -3,7 +3,10 @@ from spgill.util.chassis import Chassis
 
 
 chassis = Chassis(
+    proxy="~/.guardiandeck.json",
     props={
+        # Use config
+        "apiKey": "",
         # Auth props
         "bungieId": "",
         "token": "",
@@ -11,7 +14,8 @@ chassis = Chassis(
         "refreshToken": "",
         "refreshTokenExpiration": "",
         # Player props
-        "destinyId": "",
+        "membershipId": "",
+        "membershipType": None,
         "characterId": "",
-    }
+    },
 )

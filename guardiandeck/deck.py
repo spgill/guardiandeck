@@ -11,6 +11,7 @@ import webbrowser
 # vendor imports
 import requests
 from StreamDeck.DeviceManager import DeviceManager
+from StreamDeck.ImageHelpers import PILHelper
 
 # local imports
 import guardiandeck.config as config
@@ -21,12 +22,10 @@ class GuardianDeck:
     root = "https://www.bungie.net"
 
     def __init__(self):
-        # Open and read the __apiKey__ file
-        self.apiKeyPath = (
-            pathlib.Path(sys.argv[0]).absolute().parent / "__apiKey__"
-        )
-        with self.apiKeyPath.open("r") as apiKeyFile:
-            self.apiKey = apiKeyFile.read().strip()
+        # Gotta make sure there's an API key configured
+        self.apiKey = config.chassis.props.apiKey.get()
+        if not self.apiKey:
+            raise RuntimeError("No API key configured!")
 
         # Open up a connection to the stream deck
         self.openDeck()
@@ -144,55 +143,46 @@ class GuardianDeck:
         return fetchedImage
 
     def prepareImage(self, image):
-        # First, resize the image
-        resized = image.resize(size=(72, 72), resample=Image.LANCZOS)
+        # # First, resize the image
+        # resized = image.resize(size=(72, 72), resample=Image.LANCZOS)
 
-        # Correct image channel order
-        (r, g, b) = resized.split()
-        corrected = Image.merge(mode="RGB", bands=(b, g, r))
+        # # Correct image channel order
+        # (r, g, b) = resized.split()
+        # corrected = Image.merge(mode="RGB", bands=(b, g, r))
 
-        # Return the bytes of the image
-        return corrected.tobytes()
+        # # Return the bytes of the image
+        # return corrected.tobytes()
+        return PILHelper.to_native_format(self.deck, image)
 
     def fetchUserInfo(self):
         self.verifyAuth()
 
-        # Request the user info
+        # Request the bungie net user info
         bungieId = config.chassis.props.bungieId.get()
-        print("bungo", bungieId)
         player = self.apiCall(
             f"/Platform/User/GetMembershipsById/{bungieId}/0/"
         )
 
-        pprint.pprint(player)
-
-        # Store the destiny ID
-        config.chassis.props.destinyId.set(
-            player["destinyMemberships"][0]["membershipId"]
-        )
+        # Store the destiny membership ID and membership type (we assume destiny membership number 0)
+        membership = player["destinyMemberships"][0]
+        self.membershipId = membership["membershipId"]
+        self.membershipType = membership["membershipType"]
 
         # Request the player's destiny profile
         profile = self.apiCall(
-            f"/Platform/Destiny2/3/Profile/"
-            + config.chassis.props.destinyId.get()
-            + "/?components=200"
+            f"/Platform/Destiny2/{self.membershipType}/Profile/{self.membershipId}/?components=200"
         )
 
         # Iterate through characters and put them on the deck
         # for NOW just take the first one
-        print("profile", profile)
         characters = profile["characters"]["data"]
         for i, characterId in enumerate(characters):
-            # character = characters[characterId]
-            # self.deck.set_key_image(
-            #     self.key(i, 1),
-            #     self.prepareImage(
-            #         self.fetchImage(
-            #             character['emblemPath']
-            #         ),
-            #     ),
-            # )
-            config.chassis.props.characterId.set(characterId)
+            character = characters[characterId]
+            self.deck.set_key_image(
+                self.key(i, 1),
+                self.prepareImage(self.fetchImage(character["emblemPath"])),
+            )
+            self.characterId = characterId
 
         config.chassis.props.sync()
 
@@ -223,12 +213,8 @@ class GuardianDeck:
         # except KeyboardInterrupt:
         #     return
 
-        inventory = self.apiCall(
-            "/Platform/Destiny2/4/Profile/"
-            + config.chassis.props.destinyId.get()
-            + "/Character/"
-            + config.chassis.props.characterId.get()
-            + "/?components=205"
-        )
+        apiPath = f"/Platform/Destiny2/{self.membershipType}/Profile/{self.membershipId}/Character/{self.characterId}/?components=205"
+        print("PATH", apiPath)
+        inventory = self.apiCall(apiPath)
 
         pprint.pprint(inventory)
