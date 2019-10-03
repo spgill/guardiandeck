@@ -25,6 +25,8 @@ jobs:
               api_key: $GITHUB_TOKEN
               file: './dist/guardiandeck-linux'
               skip_cleanup: true
+              on:
+                  tags: true
 
         - stage: build
           os: windows
