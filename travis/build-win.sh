@@ -11,4 +11,4 @@ echo "new PATH=$PATH"
 
 pip install -r requirements.txt
 pip install pyinstaller
-pyinstaller -F -n guardiandeck-win.exe guardiandeck/main.py
+pyinstaller -F -n guardiandeck-${TRAVIS_TAG}-win.exe guardiandeck/main.py

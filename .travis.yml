@@ -8,6 +8,14 @@ jobs:
           language: shell
           script:
               - './travis/build-macos.sh'
+          deploy:
+              provider: releases
+              api_key: $GITHUB_TOKEN
+              file: './dist/*.*'
+              overwrite: true
+              skip_cleanup: true
+              on:
+                  tags: true
 
         - stage: build
           os: linux
@@ -23,7 +31,8 @@ jobs:
           deploy:
               provider: releases
               api_key: $GITHUB_TOKEN
-              file: './dist/guardiandeck-linux'
+              file: './dist/*.*'
+              overwrite: true
               skip_cleanup: true
               on:
                   tags: true
@@ -33,3 +42,11 @@ jobs:
           language: shell
           script:
               - ./travis/build-win.sh
+          deploy:
+              provider: releases
+              api_key: $GITHUB_TOKEN
+              file: './dist/*.*'
+              overwrite: true
+              skip_cleanup: true
+              on:
+                  tags: true
