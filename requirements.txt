@@ -1,3 +1,4 @@
+wheel
 hidapi
 Pillow
 requests
