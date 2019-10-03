@@ -2,5 +2,20 @@
     "editor.tabSize": 4,
     "editor.formatOnSave": true,
     "editor.detectIndentation": false,
-    "python.formatting.provider": "black"
+    "python.formatting.provider": "black",
+    "workbench.colorCustomizations": {
+        "activityBar.background": "#3e485a",
+        "activityBar.foreground": "#e7e7e7",
+        "activityBar.inactiveForeground": "#e7e7e799",
+        "activityBarBadge.background": "#976879",
+        "activityBarBadge.foreground": "#e7e7e7",
+        "titleBar.activeBackground": "#29303c",
+        "titleBar.inactiveBackground": "#29303c99",
+        "titleBar.activeForeground": "#e7e7e7",
+        "titleBar.inactiveForeground": "#e7e7e799",
+        "statusBar.background": "#29303c",
+        "statusBarItem.hoverBackground": "#3e485a",
+        "statusBar.foreground": "#e7e7e7"
+    },
+    "peacock.color": "#29303c"
 }
