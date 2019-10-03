@@ -20,16 +20,14 @@ jobs:
               - sudo apt install libusb-1.0-0-dev libudev-dev
           script:
               - ./travis/build-linux.sh
+          deploy:
+            provider: releases
+                api_key: $GITHUB_TOKEN
+                file: "./dist/guardiandeck-linux"
+                skip_cleanup: true
 
         - stage: build
           os: windows
           language: shell
           script:
               - ./travis/build-win.sh
-
-        - stage: Deploy
-          os: linux
-          dist: xenial
-          language: shell
-          script:
-              - ./travis/complete.sh
