@@ -5,6 +5,7 @@ jobs:
     include:
         - stage: build
           os: osx
+          language: shell
           script:
               - './travis/build-macos.sh'
 
@@ -19,6 +20,7 @@ jobs:
 
         - stage: build
           os: windows
+          language: shell
           script:
               - ./travis/build-win.sh
 
