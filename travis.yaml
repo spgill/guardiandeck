@@ -1,0 +1,28 @@
+# language configuration
+language: python
+python:
+    - '3.7'
+
+# Only build on tags
+if: tag IS present
+
+jobs:
+    include:
+        - stage: build
+          os: osx
+          script:
+              - './travis/build-macos.sh'
+
+        - stage: build
+          os: linux
+          dist: xenial
+          script:
+              - ./travis/build-linux.sh
+
+        - stage: build
+          os: windows
+          script:
+              - ./travis/build-win.sh
+
+        - stage: Deploy
+              - ./travis/complete.sh
