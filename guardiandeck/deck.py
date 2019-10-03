@@ -10,25 +10,10 @@ import webbrowser
 
 # vendor imports
 import requests
-
-# local imports
-from spgill.util.chassis import Chassis
 from StreamDeck.DeviceManager import DeviceManager
 
-
-chassis = Chassis(
-    props={
-        # Auth props
-        "bungieId": "",
-        "token": "",
-        "tokenExpiration": "",
-        "refreshToken": "",
-        "refreshTokenExpiration": "",
-        # Player props
-        "destinyId": "",
-        "characterId": "",
-    }
-)
+# local imports
+import guardiandeck.config as config
 
 
 class GuardianDeck:
@@ -61,20 +46,23 @@ class GuardianDeck:
     def verifyAuth(self):
         # Get and decode the timestamps
         now, tokenExpiration, refreshTokenExpiration = None, None, None
-        if chassis.props.token.get():
+        if config.chassis.props.token.get():
             now = datetime.datetime.now()
             tokenExpiration = datetime.datetime.fromisoformat(
-                chassis.props.tokenExpiration.get()
+                config.chassis.props.tokenExpiration.get()
             )
             refreshTokenExpiration = datetime.datetime.fromisoformat(
-                chassis.props.refreshTokenExpiration.get()
+                config.chassis.props.refreshTokenExpiration.get()
             )
 
         # We have to fetch a whole new token if;
         # 1) there is no token at all
         # or
         # 2) the refresh token is expired
-        if not chassis.props.token.get() or refreshTokenExpiration <= now:
+        if (
+            not config.chassis.props.token.get()
+            or refreshTokenExpiration <= now
+        ):
             print("Fetching new token...")
 
             # Start an authorization request with the spgill server
@@ -105,33 +93,35 @@ class GuardianDeck:
             # Ask the server for a refresh
             refreshResp = requests.get(
                 url=f"https://home.spgill.me/bungie/refresh",
-                data={"refresh_token": chassis.props.refreshToken.get()},
+                data={
+                    "refresh_token": config.chassis.props.refreshToken.get()
+                },
             )
             self.storeTokenResponse(refreshResp.json())
 
     def storeTokenResponse(self, response):
-        chassis.props.bungieId.set(response["membership_id"])
-        chassis.props.token.set(response["access_token"])
-        chassis.props.tokenExpiration.set(
+        config.chassis.props.bungieId.set(response["membership_id"])
+        config.chassis.props.token.set(response["access_token"])
+        config.chassis.props.tokenExpiration.set(
             (
                 datetime.datetime.now()
                 + datetime.timedelta(seconds=response["expires_in"])
             ).isoformat()
         )
-        chassis.props.refreshToken.set(response["refresh_token"])
-        chassis.props.refreshTokenExpiration.set(
+        config.chassis.props.refreshToken.set(response["refresh_token"])
+        config.chassis.props.refreshTokenExpiration.set(
             (
                 datetime.datetime.now()
                 + datetime.timedelta(seconds=response["refresh_expires_in"])
             ).isoformat()
         )
-        chassis.props.sync()
+        config.chassis.props.sync()
 
     def apiCall(self, route, data={}, method="get", **kwargs):
         # Construct the headers
         headers = {
             "X-API-Key": self.apiKey,
-            "Authorization": f"Bearer {chassis.props.token.get()}",
+            "Authorization": f"Bearer {config.chassis.props.token.get()}",
         }
 
         # Make the request
@@ -168,7 +158,7 @@ class GuardianDeck:
         self.verifyAuth()
 
         # Request the user info
-        bungieId = chassis.props.bungieId.get()
+        bungieId = config.chassis.props.bungieId.get()
         print("bungo", bungieId)
         player = self.apiCall(
             f"/Platform/User/GetMembershipsById/{bungieId}/0/"
@@ -177,14 +167,14 @@ class GuardianDeck:
         pprint.pprint(player)
 
         # Store the destiny ID
-        chassis.props.destinyId.set(
+        config.chassis.props.destinyId.set(
             player["destinyMemberships"][0]["membershipId"]
         )
 
         # Request the player's destiny profile
         profile = self.apiCall(
             f"/Platform/Destiny2/3/Profile/"
-            + chassis.props.destinyId.get()
+            + config.chassis.props.destinyId.get()
             + "/?components=200"
         )
 
@@ -202,9 +192,9 @@ class GuardianDeck:
             #         ),
             #     ),
             # )
-            chassis.props.characterId.set(characterId)
+            config.chassis.props.characterId.set(characterId)
 
-        chassis.props.sync()
+        config.chassis.props.sync()
 
     def openDeck(self):
         # Create a manager
@@ -235,9 +225,9 @@ class GuardianDeck:
 
         inventory = self.apiCall(
             "/Platform/Destiny2/4/Profile/"
-            + chassis.props.destinyId.get()
+            + config.chassis.props.destinyId.get()
             + "/Character/"
-            + chassis.props.characterId.get()
+            + config.chassis.props.characterId.get()
             + "/?components=205"
         )
 
