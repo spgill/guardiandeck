@@ -15,6 +15,8 @@ jobs:
           language: python
           python:
               - '3.7'
+          before_install:
+              - sudo apt install libusb-1.0-0-dev libudev-dev
           script:
               - ./travis/build-linux.sh
 
