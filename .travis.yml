@@ -2,56 +2,56 @@
 if: tag IS present
 
 jobs:
-    include:
-        - stage: build
-          os: osx
-          language: shell
-          script:
-              - './travis/build-macos.sh'
-          deploy:
-              provider: releases
-              api_key: $GITHUB_TOKEN
-              file_glob: true
-              file: dist/*
-              overwrite: true
-              skip_cleanup: true
-              on:
-                  tags: true
+  include:
+    - stage: build
+      os: osx
+      language: shell
+      script:
+        - "./travis/build-osx.sh"
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        file_glob: true
+        file: dist/*
+        overwrite: true
+        skip_cleanup: true
+        on:
+          tags: true
 
-        - stage: build
-          os: linux
-          dist: xenial
-          language: python
-          python:
-              - '3.7'
-          before_install:
-              - sudo apt update
-              - sudo apt install libusb-1.0-0-dev libudev-dev
-          script:
-              - ./travis/build-linux.sh
-          deploy:
-              provider: releases
-              api_key: $GITHUB_TOKEN
-              file_glob: true
-              file: dist/*
-              overwrite: true
-              skip_cleanup: true
-              on:
-                  tags: true
-        # Window build is not currently automated because Travis only
-        # uses Windows Server, which produces executables incompatible
-        # with desktop versions of Windows.
-        # - stage: build
-        #   os: windows
-        #   language: shell
-        #   script:
-        #       - ./travis/build-win.sh
-        #   deploy:
-        #       provider: releases
-        #       api_key: $GITHUB_TOKEN
-        #       file_glob: true
-        #       file: dist/*
-        #       overwrite: true
-        #       skip_cleanup: true
-        #       on:
-        #           tags: true
+    - stage: build
+      os: linux
+      dist: xenial
+      language: python
+      python:
+        - "3.7"
+      before_install:
+        - sudo apt update
+        - sudo apt install libusb-1.0-0-dev libudev-dev
+      script:
+        - ./travis/build-linux.sh
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        file_glob: true
+        file: dist/*
+        overwrite: true
+        skip_cleanup: true
+        on:
+          tags: true
+    # Window build is not currently automated because Travis only
+    # uses Windows Server, which produces executables incompatible
+    # with desktop versions of Windows.
+    - stage: build
+      os: windows
+      language: shell
+      script:
+        - ./travis/build-win.sh
+      deploy:
+        provider: releases
+        api_key: $GITHUB_TOKEN
+        file_glob: true
+        file: dist/*
+        overwrite: true
+        skip_cleanup: true
+        on:
+          tags: true
