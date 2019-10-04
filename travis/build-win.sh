@@ -23,6 +23,8 @@ pip3 install pyinstaller
 pyinstaller -n ${APP_NAME} guardiandeck/main.py
 
 # Package the app up and clean up
-mv dist/${APP_NAME} dist/${PACKAGE_NAME}
-tar -C dist -cvzf dist/${PACKAGE_NAME}.tar.gz ${PACKAGE_NAME}
-rm -rf dist/${PACKAGE_NAME}
+cd dist
+mv ${APP_NAME} ${PACKAGE_NAME}
+zip -r ${PACKAGE_NAME}.zip ${PACKAGE_NAME}
+rm -rf ${PACKAGE_NAME}
+
