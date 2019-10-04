@@ -7,7 +7,7 @@ chassis = Chassis(
     proxy="~/.guardiandeck.json",
     props={
         # Use config
-        "apiKey": "",
+        "apiKey": "ab4da0d60e4943d1997be3cb2773a6e7",
         # Auth props
         "bungieId": "",
         "token": "",
