@@ -4,8 +4,8 @@
 export APP_NAME=guardiandeck
 export PACKAGE_NAME=${APP_NAME}-${TRAVIS_TAG}-win64
 
-# Install python 3 on the vm
-choco install python
+# Install python 3 and zip on the vm
+choco install python zip
 
 # refreshenv does not seem to work in bash, so reload it manually.
 # Entries in the Machine PATH might contain trailing slashes, drop those.
