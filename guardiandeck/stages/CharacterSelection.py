@@ -2,7 +2,7 @@
 import pprint
 
 # vendor imports
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 from StreamDeck.ImageHelpers import PILHelper
 
 # local imports
@@ -26,9 +26,7 @@ class CharacterSelectionStage(InteractionFrame):
             self.selections.append(characterId)
 
             # Insert character emblem
-            self.keys[i + 1][1] = self.deck.prepareImage(
-                self.deck.fetchImage(character["emblemPath"])
-            )
+            self.keys[i + 1][1] = character["emblemPath"]
 
             # Insert information tile below
             self.keys[i + 1][2] = self.infoTile(character)
