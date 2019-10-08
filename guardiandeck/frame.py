@@ -24,7 +24,7 @@ class InteractionFrame:
     def destroy(self):
         pass
 
-    def press(self, x, y):
+    async def press(self, x, y):
         pass
 
 

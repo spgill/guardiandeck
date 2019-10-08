@@ -15,18 +15,19 @@ class BucketMenuStage(InteractionFrame):
     def setup(self):
         self.bucketIndex = self.options["bucketIndex"]
         self.bucketHash = self.options["bucketHash"]
-        self.inventoryData = self.options["inventoryData"]
 
         # Copy icon from the previous bucket
         self.keys[4][0] = self.deck._stack[1].keys[4][self.bucketIndex]
 
         # Figure out every item in this bucket
         bucketItems = []
-        for item in self.inventoryData["inventory"]["data"]["items"]:
+        for item in self.deck.inventoryData["inventory"]["data"]["items"]:
             if item["bucketHash"] == self.bucketHash:
                 bucketItems.append(item)
 
         print("BUCKET ITEMS")
+
+        self.selections = {}
 
         # Insert icons
         for i, item in enumerate(bucketItems):
@@ -35,7 +36,7 @@ class BucketMenuStage(InteractionFrame):
             localY = (i - localX) // 3
             localX = 3 - localX
 
-            itemInstanceInfo = self.inventoryData["itemComponents"][
+            itemInstanceInfo = self.deck.inventoryData["itemComponents"][
                 "instances"
             ]["data"][item["itemInstanceId"]]
             itemInfo = self.deck.manifestGet(
@@ -43,14 +44,31 @@ class BucketMenuStage(InteractionFrame):
             )
 
             print(f'{i}: {itemInfo["displayProperties"]["name"]}')
+            print(item)
+
+            self.selections[(localX, localY)] = item["itemInstanceId"]
 
             self.keys[localX][localY] = helpers.generateItemIcon(
-                self.deck, self.inventoryData, item
+                self.deck, self.deck.inventoryData, item
             )
 
         print()
 
-    def press(self, x, y):
+    async def press(self, x, y):
         if x == 4:
             self.deck.popFrame()
+        elif x > 0 and x < 4:
+            itemInstanceId = self.selections[(x, y)]
+
+            response = self.deck.apiCall(
+                "/Platform/Destiny2/Actions/Items/EquipItem/",
+                method="post",
+                data={
+                    "itemId": itemInstanceId,
+                    "characterId": self.deck.characterId,
+                    "membershipType": self.deck.membershipType,
+                },
+            )
+
+            print("equip response", response)
 

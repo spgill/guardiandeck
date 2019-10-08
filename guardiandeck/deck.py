@@ -1,4 +1,5 @@
 # stdlib imports
+import asyncio
 import datetime
 import os
 import pathlib
@@ -7,6 +8,7 @@ from PIL import Image, ImageDraw
 import hashlib
 import json
 import json.decoder
+import marshal
 import sqlite3
 import sys
 import threading
@@ -48,8 +50,13 @@ class GuardianDeck:
         # Instance variables
         self.apiSession = requests.Session()
         self.hold1 = False
-        self.iconCache = config.chassis.store.path / "cache" / "icons"
+        self.inventorySubscriptions = []
+        self.pollStarted = False
+        self.inventoryData = None
+        self.inventoryHash = None
 
+        # Icon cache
+        self.iconCache = config.chassis.store.path / "cache" / "icons"
         self.iconCache.mkdir(exist_ok=True)
 
         # Open up a connection to the stream deck
@@ -151,17 +158,27 @@ class GuardianDeck:
         headers = {
             "X-API-Key": self.apiKey,
             "Authorization": f"Bearer {config.chassis.props.token.get()}",
+            "Content-Type": "application/json",
         }
 
         # Make the request
         response = getattr(self.apiSession, method.lower())(
-            url=config.bungie + route, headers=headers, data=data, **kwargs
+            url=config.bungie + route,
+            headers=headers,
+            data=json.dumps(data),
+            **kwargs,
         )
 
         # Just return the json. Further functionality may
         # be needed in the future
         try:
-            return response.json().get("Response", response)
+            decoded = response.json()
+            errorCode = decoded.get("ErrorCode", 0)
+
+            if errorCode > 1:
+                print(f'API ERROR: {decoded.get("Message", errorCode)}')
+
+            return decoded.get("Response", response)
         except json.decoder.JSONDecodeError:
             raise APIError(
                 f"Expected JSON data from API. Received {response.status_code}"
@@ -309,9 +326,6 @@ class GuardianDeck:
         self.device.open()
         self.device.reset()
 
-        # Set callback for buttons
-        self.device.set_key_callback(self.pressStack)
-
     def closeDeck(self):
         self.device.close()
 
@@ -359,15 +373,30 @@ class GuardianDeck:
 
         # Wait until all application threads have terminated (for this example,
         # this is when all deck handles are closed)
-        for t in threading.enumerate():
-            if t is threading.currentThread():
-                continue
+        # for t in threading.enumerate():
+        #     if t is threading.currentThread():
+        #         continue
 
-            if t.is_alive():
-                try:
-                    t.join()
-                except KeyboardInterrupt:
-                    pass
+        #     if t.is_alive():
+        #         try:
+        #             t.join()
+        #         except KeyboardInterrupt:
+        #             pass
+
+        # Create async loop
+        self.loop = asyncio.get_event_loop()
+
+        # Add key callback to the loop
+        self.device.set_key_callback_async(self.pressStack, loop=self.loop)
+
+        # Add inventory poller to the loop
+        self.loop.create_task(self.pollInventory())
+
+        # Run the loop until stopped
+        print("Loop starting...")
+        self.loop.run_forever()
+        print("Loop stopped")
+        self.cleanExit()
 
     def renderStack(self):
         # If the stack is empty, zero out all keys to black
@@ -409,17 +438,17 @@ class GuardianDeck:
         # self.renderStack()
         self.pushFrame(LoadingFrame)
 
-    def pressStack(self, deck, key, state):
+    async def pressStack(self, deck, key, state):
         # Check for exit conditions
         if key == self.key(0, 2):
             self.hold1 = state
         elif key == self.key(0, 0) and self.hold1:
-            self.cleanExit()
+            self.loop.stop()
 
         if state is False:
             if len(self._stack):
                 try:
-                    self._stack[0].press(*self.coords(key))
+                    await self._stack[0].press(*self.coords(key))
                 except Exception:
                     print(
                         "Unexpected error:\n",
@@ -451,3 +480,52 @@ class GuardianDeck:
                 self._stack[0].setActive(True)
 
             self.renderStack()
+
+    def startInventoryPoll(self):
+        self.pollStarted = True
+
+    async def waitForPollStart(self):
+        while True:
+            if self.pollStarted:
+                return
+            await asyncio.sleep(0.1)
+
+    def subscribeInventory(self, callback, flag=True):
+        if flag:
+            self.inventorySubscriptions.append(callback)
+        else:
+            self.inventorySubscriptions.remove(callback)
+
+    async def pollInventory(self):
+        await self.waitForPollStart()
+
+        print("Poll has started")
+
+        while True:
+            try:
+                # Get the character inventory
+                self.verifyAuth()
+                self.inventoryData = self.apiCall(
+                    f"/Platform/Destiny2/{self.membershipType}/Profile/{self.membershipId}/Character/{self.characterId}/?components=201,205,300"
+                )
+
+                # Hash the data
+                currentHash = hashlib.blake2b(
+                    marshal.dumps(self.inventoryData)
+                ).hexdigest()
+
+                print("checking hash")
+                # If the hash has changed, then update the stored data
+                if currentHash != self.inventoryHash:
+                    self.inventoryHash = currentHash
+
+                    # Call all of the callback functions and await them
+                    await asyncio.gather(
+                        *[cb() for cb in self.inventorySubscriptions]
+                    )
+
+            except Exception as err:
+                print(err)
+
+            # Wait until next poll
+            await asyncio.sleep(5)

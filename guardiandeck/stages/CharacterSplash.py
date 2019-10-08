@@ -1,4 +1,5 @@
 # stdlib imports
+import asyncio
 import hashlib
 import json
 import marshal
@@ -29,60 +30,41 @@ class CharacterSplashStage(InteractionFrame):
             if index >= 0 and index <= 2:
                 self.buckets[index] = bucket["hash"]
 
-        # Start the polling thread
-        self.pollingThread = threading.Thread(target=self.poll)
-        self.pollingThread.start()
+        # Subscribe to inventory changes
+        self.deck.subscribeInventory(self.updateInventory)
 
-    def destroy(self):
-        if self.pollingThread.is_alive():
-            self.killFlag = True
-            self.pollingThread.join()
+        # If inventory data already exists, call an immediate update
+        if self.deck.inventoryData:
+            print("Calling first update")
+            asyncio.run(self.updateInventory())
 
-    def poll(self):
+    # def destroy(self):
+    #     if self.pollingThread.is_alive():
+    #         self.killFlag = True
+    #         self.pollingThread.join()
+
+    async def updateInventory(self):
         # Get character data
-        character = self.options["character"]
-        characterId = character["characterId"]
+        # character = self.options["character"]
+        # characterId = character["characterId"]
 
-        # Start the loop
-        while True:
-            # This is the escape hatch
-            if self.killFlag:
-                return
+        print("Update!")
 
-            # Get the character inventory
-            self.deck.verifyAuth()
-            self.inventoryData = self.deck.apiCall(
-                f"/Platform/Destiny2/{self.deck.membershipType}/Profile/{self.deck.membershipId}/Character/{characterId}/?components=201,205,300"
-            )
+        # Insert icons for the three equipped weapons
+        for item in self.deck.inventoryData["equipment"]["data"]["items"]:
+            bucketHash = item["bucketHash"]
+            if bucketHash in self.buckets:
+                bucketIndex = self.buckets.index(bucketHash)
 
-            # Hash the data
-            currentHash = hashlib.blake2b(
-                marshal.dumps(self.inventoryData)
-            ).hexdigest()
+                self.keys[4][bucketIndex] = helpers.generateItemIcon(
+                    self.deck, self.deck.inventoryData, item
+                )
 
-            # If the hash has changed, then update the stored data
-            if currentHash != self.inventoryHash:
-                self.inventoryHash = currentHash
+        # Trigger a re-render
+        if self.active:
+            self.deck.renderStack()
 
-                # Insert icons for the three equipped weapons
-                for item in self.inventoryData["equipment"]["data"]["items"]:
-                    bucketHash = item["bucketHash"]
-                    if bucketHash in self.buckets:
-                        bucketIndex = self.buckets.index(bucketHash)
-
-                        self.keys[4][bucketIndex] = helpers.generateItemIcon(
-                            self.deck, self.inventoryData, item
-                        )
-
-                # Trigger a re-render
-                if self.active:
-                    self.deck.renderStack()
-
-            # Sleep until the next poll
-            time.sleep(5)
-            continue
-
-    def press(self, x, y):
+    async def press(self, x, y):
         if x == 4:
             bucketIndex = y
 
@@ -90,7 +72,6 @@ class CharacterSplashStage(InteractionFrame):
             self.deck.pushFrame(
                 BucketMenuStage,
                 {
-                    "inventoryData": self.inventoryData,
                     "bucketHash": self.buckets[bucketIndex],
                     "bucketIndex": bucketIndex,
                 },

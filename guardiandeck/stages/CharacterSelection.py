@@ -62,13 +62,13 @@ class CharacterSelectionStage(InteractionFrame):
 
         return self.deck.prepareImage(canvas)
 
-    def press(self, x, y):
+    async def press(self, x, y):
         # Check for the range that the buttons are in
         if x >= 1 and x <= 3 and y == 1:
             index = x - 1
             if index < len(self.selections):
-                characterId = self.selections[index]
-                self.deck.pushFrame(
-                    CharacterSplashStage,
-                    {"character": self.characters[characterId]},
-                )
+                self.deck.characterId = self.selections[index]
+                self.deck.character = self.characters[self.deck.characterId]
+                self.deck.startInventoryPoll()
+
+                self.deck.pushFrame(CharacterSplashStage)
